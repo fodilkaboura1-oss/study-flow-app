@@ -1,0 +1,81 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --font-sans: 'Cairo', 'Inter', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    
+    /* StudyFlow Dark Theme Variables (Default) */
+    --bg-0: #060a14;
+    --bg-1: #0c1220;
+    --bg-2: #141c2e;
+    --bg-3: #1c2640;
+    --bg-4: #243050;
+    --bg-hover: rgba(99, 102, 241, 0.08);
+    --text-0: #f0f4ff;
+    --text-1: #c5cde0;
+    --text-2: #8894b0;
+    --text-3: #5a6580;
+    --primary: #6366f1;
+    --primary-light: #818cf8;
+    --primary-dark: #4f46e5;
+    --secondary: #06b6d4;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --purple: #a855f7;
+    --pink: #ec4899;
+    --grad-primary: linear-gradient(135deg, #6366f1, #06b6d4);
+    --border: rgba(99, 102, 241, 0.16);
+    --border-light: rgba(255, 255, 255, 0.06);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.2);
+  }
+
+  body.day-mode,
+  [data-theme="light"] {
+    /* StudyFlow Day Mode / Light Theme Variables */
+    --bg-0: #f5f7fb;
+    --bg-1: #ffffff;
+    --bg-2: #f0f2f8;
+    --bg-3: #e8ecf4;
+    --bg-4: #dde2ee;
+    --bg-hover: rgba(99, 102, 241, 0.06);
+    --text-0: #111827;
+    --text-1: #374151;
+    --text-2: #6b7280;
+    --text-3: #9ca3af;
+    --border: rgba(99, 102, 241, 0.14);
+    --border-light: rgba(0, 0, 0, 0.06);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-glow: 0 0 20px rgba(99, 102, 241, 0.1);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    direction: rtl;
+    background-color: var(--bg-0);
+    color: var(--text-0);
+    min-height: 100vh;
+    overflow-x: hidden;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), color 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    line-height: 1.7;
+  }
+
+  /* Custom subtle scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.25);
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.45);
+  }
+}

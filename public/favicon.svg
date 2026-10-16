@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <defs>
+    <linearGradient id="book-cyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="100%" stop-color="#0284c7"/>
+    </linearGradient>
+    <linearGradient id="book-emerald" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#34d399"/>
+      <stop offset="100%" stop-color="#059669"/>
+    </linearGradient>
+    <linearGradient id="book-rose" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f43f5e"/>
+      <stop offset="100%" stop-color="#e11d48"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Rounded Rect -->
+  <rect width="64" height="64" rx="16" fill="#0b1329"/>
+  <!-- Bottom Book (Rose) -->
+  <path d="M14 43L32 50L50 43L32 36Z" fill="url(#book-rose)"/>
+  <path d="M14 43L32 50V54L14 47Z" fill="#9f1239"/>
+  <path d="M32 50L50 43V47L32 54Z" fill="#be123c"/>
+  <!-- Middle Book (Emerald) -->
+  <path d="M16 33L32 39L48 33L32 27Z" fill="url(#book-emerald)"/>
+  <path d="M16 33L32 39V42L16 36Z" fill="#047857"/>
+  <path d="M32 39L48 33V36L32 42Z" fill="#065f46"/>
+  <!-- Top Book (Cyan) -->
+  <path d="M18 22L32 28L46 22L32 16Z" fill="url(#book-cyan)"/>
+  <path d="M18 22L32 28V31L18 25Z" fill="#0369a1"/>
+  <path d="M32 28L46 22V25L32 31Z" fill="#075985"/>
+</svg>

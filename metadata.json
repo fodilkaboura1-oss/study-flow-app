@@ -1,0 +1,6 @@
+{
+  "name": "StudyFlow AI & Mobile App",
+  "description": "منصة StudyFlow AI للدراسة الجامعية والتواصل الأكاديمي المتكاملة مع تطبيق أندرويد مستقل وتزامن فوري آمن.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

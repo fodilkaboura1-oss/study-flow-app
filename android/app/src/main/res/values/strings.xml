@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">StudyFlow</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_community">المجتمع</string>
+    <string name="nav_study">الدراسة</string>
+    <string name="nav_notifications">الإشعارات</string>
+    <string name="nav_profile">حسابي</string>
+    <string name="verified_admin">إدارة الكلية الرسمية</string>
+</resources>
