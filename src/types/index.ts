@@ -51,6 +51,15 @@ export interface Course {
   description: string;
   icon: string;
   lectureCount: number;
+  color?: string;
+  progress?: number;
+}
+
+export interface LectureChapter {
+  id: string;
+  title: string;
+  duration: string;
+  content: string;
 }
 
 export interface LectureResource {
@@ -74,6 +83,8 @@ export interface Lecture {
   week: number;
   summary: string;
   keyTakeaways: string[];
+  durationMinutes?: number;
+  chapters?: LectureChapter[];
   slidesUrl?: string;
   resources: LectureResource[];
   aiStudyQuestions: AIStudyQuestion[];

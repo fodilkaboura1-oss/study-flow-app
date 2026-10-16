@@ -19,6 +19,25 @@ const PORT = Number(process.env.PORT) || 3000;
 app.use(cors());
 app.use(express.json({ limit: '10mb' }));
 
+// Health and API status endpoint for Vercel and uptime monitoring
+app.get(['/api', '/api/health'], (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    app: 'StudyFlow API',
+    version: '1.0.0',
+    platform: 'Vercel / Node.js Serverless',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Route normalization middleware for Vercel serverless functions
+app.use((req: Request, _res: Response, next: NextFunction) => {
+  if (process.env.VERCEL && !req.url.startsWith('/api')) {
+    req.url = '/api' + req.url;
+  }
+  next();
+});
+
 // Helper to sanitize user object (remove hash & salt)
 function sanitizeUser(user: any): User {
   const { passwordHash, salt, ...safeUser } = user;

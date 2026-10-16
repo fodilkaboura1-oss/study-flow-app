@@ -5,6 +5,7 @@ import { StudyFlowMobileApp } from './components/mobile/StudyFlowMobileApp.tsx';
 import { StudyFlowWebPortal } from './components/web/StudyFlowWebPortal.tsx';
 import { AndroidProjectView } from './components/android-export/AndroidProjectView.tsx';
 import { AuthModal } from './components/AuthModal.tsx';
+import { useI18n, Language } from './lib/i18n.ts';
 import {
   Smartphone,
   Monitor,
@@ -16,6 +17,7 @@ import {
   RefreshCw,
   Sun,
   Moon,
+  Globe,
 } from 'lucide-react';
 
 import { StudyFlowLogo } from './components/StudyFlowLogo.tsx';
@@ -23,7 +25,25 @@ import { StudyFlowLogo } from './components/StudyFlowLogo.tsx';
 type AppViewMode = 'mobile' | 'web' | 'sync' | 'android-project';
 
 export default function App() {
-  const [viewMode, setViewMode] = useState<AppViewMode>('sync');
+  const { lang, setLanguage, t, isRTL } = useI18n();
+
+  // Detect mobile or standalone PWA
+  const [isMobileScreen, setIsMobileScreen] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return (
+      window.innerWidth < 768 ||
+      window.matchMedia('(display-mode: standalone)').matches ||
+      (window.navigator as unknown as { standalone?: boolean }).standalone === true
+    );
+  });
+
+  const [viewMode, setViewMode] = useState<AppViewMode>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      return 'mobile';
+    }
+    return 'mobile'; // Mobile-first default as required by prompt
+  });
+
   const [theme, setTheme] = useState<'day' | 'night'>(() => {
     return (localStorage.getItem('studyflow_theme') as 'day' | 'night') || 'day';
   });
@@ -34,6 +54,19 @@ export default function App() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   const isDayMode = theme === 'day';
+
+  // Listen to window resize to adapt mobile layout
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile =
+        window.innerWidth < 768 ||
+        window.matchMedia('(display-mode: standalone)').matches;
+      setIsMobileScreen(isMobile);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Toggle Theme
   const toggleTheme = () => {
@@ -71,8 +104,8 @@ export default function App() {
         .catch(console.error);
     }
 
-    api.getSpecialties().then((res) => setSpecialties(res.specialties));
-    api.getLevels().then((res) => setLevels(res.levels));
+    api.getSpecialties().then((res) => setSpecialties(res.specialties)).catch(console.warn);
+    api.getLevels().then((res) => setLevels(res.levels)).catch(console.warn);
   }, []);
 
   const handleSwitchUserRole = async (role: 'student' | 'admin') => {
@@ -94,11 +127,49 @@ export default function App() {
     setRefreshTrigger((prev) => prev + 1);
   };
 
+  // If on actual mobile device or in standalone PWA mode, render full-bleed mobile app directly
+  if (isMobileScreen) {
+    return (
+      <div
+        className={`w-screen h-screen overflow-hidden font-sans select-none ${
+          isDayMode ? 'bg-[#f8fafc] text-slate-800' : 'bg-[#060a14] text-slate-100'
+        }`}
+        dir={isRTL ? 'rtl' : 'ltr'}
+      >
+        <StudyFlowMobileApp
+          key={`mobile-direct-${refreshTrigger}-${currentUser?.id}-${theme}-${lang}`}
+          currentUser={currentUser}
+          isDayMode={isDayMode}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onRefreshData={handleRefreshAll}
+          onToggleTheme={toggleTheme}
+          lang={lang}
+          onSelectLanguage={setLanguage}
+          onSwitchUserRole={handleSwitchUserRole}
+        />
+
+        <AuthModal
+          isOpen={isAuthModalOpen}
+          isDayMode={isDayMode}
+          onClose={() => setIsAuthModalOpen(false)}
+          onSuccess={(user) => {
+            setCurrentUser(user);
+            setRefreshTrigger((prev) => prev + 1);
+          }}
+          specialties={specialties}
+          levels={levels}
+        />
+      </div>
+    );
+  }
+
+  // Desktop Responsive View with Toolbar & Multi-View Switcher
   return (
     <div
       className={`flex flex-col h-screen w-screen overflow-hidden font-sans select-none transition-colors duration-200 ${
         isDayMode ? 'bg-slate-100 text-slate-800' : 'bg-slate-950 text-slate-100'
       }`}
+      dir={isRTL ? 'rtl' : 'ltr'}
     >
       {/* Top Application Control Toolbar */}
       <header
@@ -121,7 +192,7 @@ export default function App() {
                 StudyFlow
               </span>
               <span className="bg-gradient-to-r from-indigo-500 to-cyan-500 text-white text-[10px] font-extrabold px-1.5 py-0.5 rounded shadow-xs">
-                AI
+                PWA
               </span>
               <span
                 className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border hidden sm:inline-block ${
@@ -130,7 +201,7 @@ export default function App() {
                     : 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30'
                 }`}
               >
-                منظومة متكاملة (Web & Mobile)
+                {t.appSubtitle}
               </span>
             </div>
           </div>
@@ -145,10 +216,24 @@ export default function App() {
           }`}
         >
           <button
+            onClick={() => setViewMode('mobile')}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
+              viewMode === 'mobile'
+                ? 'bg-indigo-600 text-white shadow-xs font-bold'
+                : isDayMode
+                ? 'text-slate-600 hover:text-slate-900'
+                : 'text-slate-400 hover:text-white'
+            }`}
+          >
+            <Smartphone className="w-3.5 h-3.5" />
+            <span>تطبيق الهاتف (PWA)</span>
+          </button>
+
+          <button
             onClick={() => setViewMode('sync')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
               viewMode === 'sync'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-bold'
+                ? 'bg-indigo-600 text-white shadow-xs font-bold'
                 : isDayMode
                 ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-white'
@@ -160,24 +245,10 @@ export default function App() {
           </button>
 
           <button
-            onClick={() => setViewMode('mobile')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
-              viewMode === 'mobile'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-bold'
-                : isDayMode
-                ? 'text-slate-600 hover:text-slate-900'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Smartphone className="w-3.5 h-3.5" />
-            <span>تطبيق الهاتف</span>
-          </button>
-
-          <button
             onClick={() => setViewMode('web')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
               viewMode === 'web'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-bold'
+                ? 'bg-indigo-600 text-white shadow-xs font-bold'
                 : isDayMode
                 ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-white'
@@ -189,26 +260,58 @@ export default function App() {
 
           <button
             onClick={() => setViewMode('android-project')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition ${
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-medium transition cursor-pointer ${
               viewMode === 'android-project'
-                ? 'bg-indigo-600 text-white shadow-sm shadow-indigo-600/30 font-bold'
+                ? 'bg-indigo-600 text-white shadow-xs font-bold'
                 : isDayMode
                 ? 'text-slate-600 hover:text-slate-900'
                 : 'text-slate-400 hover:text-white'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">مشروع Android و APK</span>
+            <span className="hidden sm:inline">مشروع Android & APK</span>
             <span className="sm:hidden">APK</span>
           </button>
         </div>
 
-        {/* Quick Actions & Day/Night Toggle */}
+        {/* Quick Actions & Day/Night Toggle & Language */}
         <div className="flex items-center gap-2">
-          {/* Day / Night Mode Toggle Button */}
+          {/* Language Switcher */}
+          <div
+            className={`flex items-center p-0.5 rounded-xl border text-[11px] font-bold ${
+              isDayMode ? 'bg-slate-100 border-slate-200' : 'bg-slate-950 border-slate-800'
+            }`}
+          >
+            <button
+              onClick={() => setLanguage('ar')}
+              className={`px-2 py-1 rounded-lg transition ${
+                lang === 'ar' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              عربي
+            </button>
+            <button
+              onClick={() => setLanguage('fr')}
+              className={`px-2 py-1 rounded-lg transition ${
+                lang === 'fr' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              FR
+            </button>
+            <button
+              onClick={() => setLanguage('en')}
+              className={`px-2 py-1 rounded-lg transition ${
+                lang === 'en' ? 'bg-indigo-600 text-white font-bold' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              EN
+            </button>
+          </div>
+
+          {/* Day / Night Mode Toggle */}
           <button
             onClick={toggleTheme}
-            className={`flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border text-xs font-semibold transition ${
+            className={`flex items-center gap-1.5 py-1.5 px-2.5 rounded-xl border text-xs font-semibold transition cursor-pointer ${
               isDayMode
                 ? 'bg-amber-50 text-amber-800 border-amber-300 hover:bg-amber-100 shadow-xs'
                 : 'bg-slate-800 text-slate-200 border-slate-700 hover:bg-slate-700'
@@ -248,35 +351,31 @@ export default function App() {
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  طالب: فوديل
+                  طالب
                 </button>
                 <button
                   onClick={() => handleSwitchUserRole('admin')}
                   className={`px-2 py-1 rounded-lg transition ${
                     currentUser.role === 'admin'
-                      ? 'bg-sky-600 text-white font-bold'
+                      ? 'bg-indigo-600 text-white font-bold'
                       : isDayMode
                       ? 'text-slate-600 hover:text-slate-900'
                       : 'text-slate-400 hover:text-white'
                   }`}
                 >
-                  إدارة الكلية
+                  مشرف
                 </button>
               </div>
 
               <button
                 onClick={() => setIsAuthModalOpen(true)}
-                className={`flex items-center gap-1.5 py-1 px-2.5 border rounded-xl text-xs transition ${
+                className={`flex items-center gap-1.5 py-1 px-2.5 rounded-xl border text-xs transition ${
                   isDayMode
-                    ? 'bg-slate-100 hover:bg-slate-200 border-slate-300 text-slate-800'
-                    : 'bg-slate-800 hover:bg-slate-700 border-slate-700 text-slate-200'
+                    ? 'bg-slate-100 border-slate-200 hover:bg-slate-200'
+                    : 'bg-slate-800 border-slate-700 hover:bg-slate-700'
                 }`}
               >
-                <img
-                  src={currentUser.avatar}
-                  alt={currentUser.name}
-                  className="w-5 h-5 rounded-md object-cover"
-                />
+                <UserIcon className="w-3.5 h-3.5 text-indigo-400" />
                 <span className="font-semibold max-w-[80px] truncate">{currentUser.name}</span>
                 {currentUser.verified && <ShieldCheck className="w-3.5 h-3.5 text-sky-500" />}
               </button>
@@ -284,7 +383,7 @@ export default function App() {
           ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
-              className="py-1 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition"
+              className="py-1 px-3 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition cursor-pointer"
             >
               تسجيل الدخول
             </button>
@@ -293,7 +392,7 @@ export default function App() {
           <button
             onClick={handleRefreshAll}
             title="تحديث البيانات المتزامنة"
-            className={`p-2 rounded-xl transition ${
+            className={`p-2 rounded-xl transition cursor-pointer ${
               isDayMode
                 ? 'text-slate-500 hover:text-slate-900 hover:bg-slate-200'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800'
@@ -306,10 +405,60 @@ export default function App() {
 
       {/* Main Viewport Container */}
       <div className="flex-1 overflow-hidden relative flex">
-        {/* VIEW 1: SIDE-BY-SIDE SYNC VIEW */}
+        {/* VIEW 1: DEDICATED MOBILE FULL PWA VIEW */}
+        {viewMode === 'mobile' && (
+          <div
+            className={`flex-1 h-full flex items-center justify-center p-2 sm:p-4 overflow-y-auto ${
+              isDayMode ? 'bg-slate-200/60' : 'bg-slate-950'
+            }`}
+          >
+            <div
+              className={`relative w-full max-w-[420px] h-[820px] max-h-[96vh] rounded-[42px] p-2.5 shadow-2xl border-[3px] flex flex-col overflow-hidden ${
+                isDayMode
+                  ? 'bg-slate-300 border-slate-400 shadow-slate-400/50 ring-1 ring-slate-400/50'
+                  : 'bg-slate-900 border-slate-800 shadow-black ring-1 ring-slate-700/80'
+              }`}
+            >
+              {/* Speaker & Notch */}
+              <div
+                className={`absolute top-3.5 left-1/2 -translate-x-1/2 w-24 h-4 rounded-full z-40 flex items-center justify-center ${
+                  isDayMode ? 'bg-slate-400' : 'bg-slate-950'
+                }`}
+              >
+                <div
+                  className={`w-2 h-2 rounded-full mr-2 ${
+                    isDayMode ? 'bg-slate-600' : 'bg-slate-800'
+                  }`}
+                />
+                <div
+                  className={`w-8 h-1 rounded-full ${
+                    isDayMode ? 'bg-slate-600' : 'bg-slate-800'
+                  }`}
+                />
+              </div>
+
+              {/* Inner Screen */}
+              <div className="flex-1 w-full h-full rounded-[34px] overflow-hidden flex flex-col relative">
+                <StudyFlowMobileApp
+                  key={`mobile-full-${refreshTrigger}-${currentUser?.id}-${theme}-${lang}`}
+                  currentUser={currentUser}
+                  isDayMode={isDayMode}
+                  onOpenAuth={() => setIsAuthModalOpen(true)}
+                  onRefreshData={handleRefreshAll}
+                  onToggleTheme={toggleTheme}
+                  lang={lang}
+                  onSelectLanguage={setLanguage}
+                  onSwitchUserRole={handleSwitchUserRole}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 2: SIDE-BY-SIDE SYNC VIEW */}
         {viewMode === 'sync' && (
           <div className="flex-1 flex flex-col md:flex-row h-full overflow-hidden">
-            {/* Left/Middle: Full Web Platform */}
+            {/* Left: Web Platform */}
             <div
               className={`flex-1 h-full overflow-hidden border-l ${
                 isDayMode ? 'border-slate-200' : 'border-slate-800'
@@ -325,7 +474,7 @@ export default function App() {
               />
             </div>
 
-            {/* Right: Realistic Phone Frame running StudyFlow Mobile App */}
+            {/* Right: Phone Frame */}
             <div
               className={`w-full md:w-[400px] p-2 md:p-3 flex flex-col items-center justify-center shrink-0 border-r overflow-y-auto ${
                 isDayMode
@@ -342,51 +491,28 @@ export default function App() {
                   }`}
                 >
                   <Smartphone className="w-3 h-3" />
-                  تطبيق StudyFlow أندرويد (تزامن حقيقي)
+                  StudyFlow PWA Mobile (تزامن حقيقي)
                 </span>
-                <p
-                  className={`text-[10px] mt-0.5 ${
-                    isDayMode ? 'text-slate-600' : 'text-slate-400'
-                  }`}
-                >
-                  متصل بالخادم الخلفي وقاعدة البيانات المشتركة
-                </p>
               </div>
 
-              {/* Realistic Mobile Device Frame */}
               <div
-                className={`relative w-[345px] h-[670px] max-h-[88vh] rounded-[38px] p-2 shadow-2xl border-[3px] flex flex-col overflow-hidden shrink-0 transition-all ${
+                className={`relative w-[345px] h-[670px] max-h-[88vh] rounded-[38px] p-2 shadow-2xl border-[3px] flex flex-col overflow-hidden shrink-0 ${
                   isDayMode
                     ? 'bg-slate-300 border-slate-400 shadow-slate-400/40 ring-1 ring-slate-400/50'
                     : 'bg-slate-900 border-slate-800 shadow-black ring-1 ring-slate-700/80'
                 }`}
               >
-                {/* Speaker & Camera notch */}
-                <div
-                  className={`absolute top-3.5 left-1/2 -translate-x-1/2 w-20 h-3.5 rounded-full z-40 flex items-center justify-center ${
-                    isDayMode ? 'bg-slate-400' : 'bg-slate-950'
-                  }`}
-                >
-                  <div
-                    className={`w-2 h-2 rounded-full mr-2 ${
-                      isDayMode ? 'bg-slate-600' : 'bg-slate-800'
-                    }`}
-                  />
-                  <div
-                    className={`w-6 h-1 rounded-full ${
-                      isDayMode ? 'bg-slate-600' : 'bg-slate-800'
-                    }`}
-                  />
-                </div>
-
-                {/* Inner Screen */}
                 <div className="flex-1 w-full h-full rounded-[30px] overflow-hidden flex flex-col relative">
                   <StudyFlowMobileApp
-                    key={`mobile-${refreshTrigger}-${currentUser?.id}-${theme}`}
+                    key={`mobile-sync-${refreshTrigger}-${currentUser?.id}-${theme}-${lang}`}
                     currentUser={currentUser}
                     isDayMode={isDayMode}
                     onOpenAuth={() => setIsAuthModalOpen(true)}
                     onRefreshData={handleRefreshAll}
+                    onToggleTheme={toggleTheme}
+                    lang={lang}
+                    onSelectLanguage={setLanguage}
+                    onSwitchUserRole={handleSwitchUserRole}
                   />
                 </div>
               </div>
@@ -394,50 +520,7 @@ export default function App() {
           </div>
         )}
 
-        {/* VIEW 2: DEDICATED MOBILE FULL VIEW */}
-        {viewMode === 'mobile' && (
-          <div
-            className={`flex-1 h-full flex items-center justify-center p-2 sm:p-4 overflow-y-auto ${
-              isDayMode ? 'bg-slate-200/60' : 'bg-slate-950'
-            }`}
-          >
-            <div
-              className={`relative w-full max-w-[400px] h-[780px] max-h-[95vh] rounded-[40px] p-2.5 shadow-2xl border-[3px] flex flex-col overflow-hidden ${
-                isDayMode
-                  ? 'bg-slate-300 border-slate-400 shadow-slate-400/50 ring-1 ring-slate-400/50'
-                  : 'bg-slate-900 border-slate-800 shadow-black ring-1 ring-slate-700/80'
-              }`}
-            >
-              <div
-                className={`absolute top-3.5 left-1/2 -translate-x-1/2 w-20 h-3.5 rounded-full z-40 flex items-center justify-center ${
-                  isDayMode ? 'bg-slate-400' : 'bg-slate-950'
-                }`}
-              >
-                <div
-                  className={`w-2 h-2 rounded-full mr-2 ${
-                    isDayMode ? 'bg-slate-600' : 'bg-slate-800'
-                  }`}
-                />
-                <div
-                  className={`w-6 h-1 rounded-full ${
-                    isDayMode ? 'bg-slate-600' : 'bg-slate-800'
-                  }`}
-                />
-              </div>
-              <div className="flex-1 w-full h-full rounded-[32px] overflow-hidden flex flex-col relative">
-                <StudyFlowMobileApp
-                  key={`mobile-full-${refreshTrigger}-${currentUser?.id}-${theme}`}
-                  currentUser={currentUser}
-                  isDayMode={isDayMode}
-                  onOpenAuth={() => setIsAuthModalOpen(true)}
-                  onRefreshData={handleRefreshAll}
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* VIEW 3: DEDICATED WEB PLATFORM FULL VIEW */}
+        {/* VIEW 3: WEB PLATFORM FULL VIEW */}
         {viewMode === 'web' && (
           <div className="flex-1 h-full overflow-hidden">
             <StudyFlowWebPortal

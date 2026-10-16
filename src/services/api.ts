@@ -31,6 +31,10 @@ class ApiService {
     return this.token;
   }
 
+  logout() {
+    this.setToken(null);
+  }
+
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
